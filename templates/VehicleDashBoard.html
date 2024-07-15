@@ -1,0 +1,28 @@
+{% extends "index.html" %}
+
+{% block index %}
+<h1>Vehicle Info</h1> <a href="/parking/vehicle_details/create/" class='btn btn-success'>add</a>
+<table class="table">
+    <thead>
+      <tr>
+        <th scope="col">S.N</th>
+        <th scope="col">Type</th>
+        <th scope="col">plate no</th>
+      </tr>
+    </thead>
+    <tbody>
+{% for ob in obj   %}
+      <tr>
+          <td>{{forloop.counter}}</td>
+          <td>{{ob.type}}</td>
+          <td>{{ob.plate_no}}</td>
+          <td>
+              <a href="/parking/vehicle_details/info/{{ob.id}}" class='btn btn-success'>info</a>
+              <a href="/parking/vehicle_details/edit/{{ob.id}}" class='btn btn-primary'>change</a>
+              <a href="/parking/vehicle_details/delete/{{ob.id}}" class='btn btn-danger'>delete</a>
+            </td>
+        </tr>
+{% endfor %}
+    </tbody>
+  </table>
+{% endblock index %}

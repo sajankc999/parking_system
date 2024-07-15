@@ -65,3 +65,41 @@ def ParkingSpaceCreateView(request):
         return render(request,"ParkingSpace.html",context)
     return render(request,"createParkingSpace.html",context)
     
+
+def VehicleDetailsAdd(request):
+    
+    if request.method=="POST":
+        data = request.POST
+        Vehicle_info.objects.create(type=data.get('type'),plate_no=data.get('plate_no'))
+        return HttpResponse('successfully added')
+    return render(request,"Vehicle_infoAdd.html")
+def VehicleDetailsView(request):
+    context={}
+    if request.method=="GET":
+        obj = Vehicle_info.objects.all()
+        context={'obj':obj,}
+    return render(request,"VehicleDashBoard.html",context=context)
+
+
+def VehicleDetailInfo(request,pk):
+    obj = Vehicle_info.objects.get(pk=pk)
+    context ={"obj":obj}
+    return render(request,"VehicleInfo.html",context)
+
+def VehicleDetailEdit(request,pk):
+    obj = Vehicle_info.objects.get(pk=pk)
+    context ={"obj":obj}
+    if request.method=="POST":
+        data = request.POST
+        obj.type=data.get('type')
+        obj.plate_no=data.get('plate_no')
+        obj.save()
+        return redirect('/parking/vehicle_details/')
+    return render(request,"VehicleEdit.html",context)
+
+def VehicleDetailDelete(request,pk):
+    obj = Vehicle_info.objects.get(pk=pk)
+    obj.delete()
+    obj.save()
+
+    return redirect('/parking/vehicle_details/')
