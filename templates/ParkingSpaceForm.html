@@ -1,0 +1,46 @@
+{% extends "index.html" %}
+
+{% block index %}
+
+{% if obj %}
+    <h1>Edit page</h1>
+
+{% else %}
+    <h1>create page</h1>
+{% endif %}
+
+{% if error %}
+    <div class="alert alert-danger" role="alert">
+    {{error}}
+  </div>
+{% endif %}
+
+<form method="POST">
+    {% csrf_token %}
+    <div class='container p-3 mx-auto border-bottom shadow-sm p-3 mb-5 bg-body-tertiary rounded'>
+
+        <div class="mb-2">
+          <label  class="form-label">Name</label>
+          <input type="text" class="form-control" name='name'value={{obj.name}} >
+        </div>
+        <div class="mb-2">
+          <label  class="form-label">Number</label>
+          <input type="number" class="form-control" name="number" value={{obj.number}} >
+        </div>
+        <div class="mb-2">
+          <label  class="form-label">Rate</label>
+          <input type="number" class="form-control" name ="rate" value={{obj.rate}} >
+        </div>
+        <div class="form-check">
+          <label  class="form-label">occupied</label>
+          <input type="checkbox" class="form-check-input" name ="occupied" value={{obj.occupied}} checked={{obj.occupied}}>
+        </div>
+        
+        
+        <div class='pposition-absolute top-50 start-50  '>
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+    </div>
+  </form>
+
+{% endblock index %}

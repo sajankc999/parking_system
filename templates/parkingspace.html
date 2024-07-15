@@ -1,0 +1,50 @@
+{% extends "index.html" %}
+
+{% block index %}
+
+    <h1>Parking Space</h1><a href="/parking/parkingSpace/create/" class='btn btn-success'>ADD SPACE</a>
+    <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">id</th>
+            <th scope="col">name</th>
+            <th scope="col">number</th>
+            <th scope="col">rate</th>
+            <th scope="col">occupied</th> 
+            <th scope="col">actions</th> 
+            
+          </tr>
+        </thead>
+        <tbody>
+            {% for mod in model %}
+
+          <tr>
+            {% comment %} <th scope="row">1</th> {% endcomment %}
+            <td>{{forloop.counter}}</td>
+            <td>{{mod.name}}</td>
+            <td>{{mod.number}}</td>
+            <td>{{mod.rate}}</td>
+            <td>
+                {% if mod.occupied %}
+                 ✔
+                {%else%}
+                ✘
+                {% endif %}
+                
+
+            </td>
+            <td>
+                <a href="/parking/parkingSpace/info/{{mod.id}}/" class='btn btn-success'>info</a>
+                <a href="/parking/parkingSpace/change/{{mod.id}}/" class='btn btn-primary'>change</a>
+                <a href="/parking/parkingSpace/delete/{{mod.id}}/" class='btn btn-danger'>delete</a>
+            </td>
+          
+          </tr>
+          
+          {% endfor %}
+        </tbody>
+      </table>
+
+      
+
+{% endblock index %}
