@@ -22,5 +22,5 @@ class ParkingDetails(models.Model):
     vehicle_info = models.ForeignKey(Vehicle_info,on_delete=models.CASCADE)
     token = models.CharField(default=uuid.uuid4,max_length=100)
     created_at = models.DateTimeField(auto_now=True)
-    checkin_time = models.DateTimeField(auto_now=True)
+    checkin_time = models.DateTimeField(auto_now=True,null=True,blank=True)
     checkout_time = models.DateTimeField()

@@ -1,0 +1,19 @@
+{% extends "index.html" %}
+
+{% block index %}
+<h1>ADD Vehicle</h1>
+<form method="POST" class="container p-3 mx-auto border-bottom shadow-sm p-3 mb-5 bg-body-tertiary rounded">
+
+    {% csrf_token %}
+    <div class="mb-3">
+      <label  class="form-label" >Type</label>
+      <input type="text" name='type' class="form-control">
+    </div>
+    <div class="mb-3">
+      <label  class="form-label">plate number</label>
+      <input type="text" class="form-control" name='plate_no'>
+    </div>
+   
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </form>
+{% endblock index %}
