@@ -1,5 +1,16 @@
 {% extends "index.html" %}
 
 {% block index %}
-    
+    <table>
+        <thead>
+            <th>Type</th>
+            <th>plate_no</th>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{obj.type}}</td>
+                <td>{{obj.plate_no}}</td>
+            </tr>
+        </tbody>
+    </table>
 {% endblock index %}

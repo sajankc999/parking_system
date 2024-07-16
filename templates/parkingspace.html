@@ -34,9 +34,9 @@
 
             </td>
             <td>
-                <a href="/parking/parkingSpace/info/{{mod.id}}/" class='btn btn-success'>info</a>
-                <a href="/parking/parkingSpace/change/{{mod.id}}/" class='btn btn-primary'>change</a>
-                <a href="/parking/parkingSpace/delete/{{mod.id}}/" class='btn btn-danger'>delete</a>
+                <a href={% url "parking_space_info" mod.id %} class='btn btn-success'>info</a>
+                <a href={% url "parking_space_edit" mod.id%} class='btn btn-primary'>change</a>
+                <a href={% url "parking_space_delete" mod.id %} class='btn btn-danger'>delete</a>
             </td>
           
           </tr>

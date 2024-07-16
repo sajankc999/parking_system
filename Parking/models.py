@@ -15,6 +15,8 @@ class Vehicle_info(models.Model):
     type = models.CharField(max_length=100)
     plate_no = models.CharField(max_length=10)
     
+    def __str__(self) -> str:
+        return self.plate_no
     
 
 class ParkingDetails(models.Model):

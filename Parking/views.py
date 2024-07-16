@@ -1,4 +1,5 @@
 from django.shortcuts import render,HttpResponse,redirect
+import datetime
 
 # Create your views here.
 
@@ -34,7 +35,7 @@ def ParkingSpaceChangeView(request,pk):
             obj.rate=data.get('rate')
             obj.occupied=data.get('occupied')=='on'
             obj.save()
-            return redirect('/parking/parking/')
+            return redirect('parking')
     return render(request,"ParkingSpaceForm.html",context)
 
 
@@ -42,7 +43,7 @@ def ParkingSpaceDeleteView(request,pk):
     obj = ParkingSpace.objects.get(pk=pk)
     obj.delete()
     
-    return redirect('/parking/parking/')
+    return redirect('parking')
 
 
 def ParkingSpaceCreateView(request):
@@ -60,7 +61,7 @@ def ParkingSpaceCreateView(request):
                 rate=data.get('rate'),
                 occupied=occupied
             )
-            return redirect('/parking/parking/')
+            return redirect('parking')
         context={"error":"number should be less then 10 and greater than 0."}
         return render(request,"ParkingSpace.html",context)
     return render(request,"createParkingSpace.html",context)
@@ -94,7 +95,7 @@ def VehicleDetailEdit(request,pk):
         obj.type=data.get('type')
         obj.plate_no=data.get('plate_no')
         obj.save()
-        return redirect('/parking/vehicle_details/')
+        return redirect('vehicle_name')
     return render(request,"VehicleEdit.html",context)
 
 def VehicleDetailDelete(request,pk):
@@ -102,4 +103,44 @@ def VehicleDetailDelete(request,pk):
     obj.delete()
     obj.save()
 
-    return redirect('/parking/vehicle_details/')
+    return redirect('vehicle_name')
+
+
+def Parking_details(request):
+    context ={}
+    queryset = ParkingDetails.objects.all()
+    vehicle_info=Vehicle_info.objects.all()
+    parking_space =ParkingSpace.objects.all()
+    context ={"queryset":queryset,"vehicle_info":vehicle_info,"parking_space":parking_space}
+
+    if request.method=="POST":
+        data = request.POST
+        parking_space_id = data.get('parking_space_user')
+        vehicle_info_id=data.get('vehicle_info_user')
+        checkout_time=data.get('checkout_time')
+        # raise Exception(parking_space,vehicle_info)
+        vehicle_obj = Vehicle_info.objects.filter(pk=vehicle_info_id).first()
+        parking_obj = ParkingSpace.objects.filter(pk=parking_space_id).first()
+        
+        
+        if ParkingDetails.objects.filter(vehicle_info=vehicle_info_id).exists():
+            parking =ParkingDetails.objects.filter(vehicle_info=vehicle_info_id).first()
+            if  datetime.datetime.now() >= parking.checkout_time:
+                parking.parking_space.occupied=True
+                parking.parking_space.save()
+            else:
+                parking.parking_space.occupied=True
+                parking.parking_space.save()
+                # context['error']='Vehicle is already parked'
+        elif parking_obj.occupied:
+            context['error']='parking space not available'
+        else:
+            ParkingDetails.objects.create(parking_space=parking_obj,
+                                            vehicle_info=vehicle_obj,
+                                            checkout_time=checkout_time).save()
+            parking_obj.occupied=True
+            parking_obj.save()
+            context['success']='succesfully created'
+            return render(request,'ParkingDetails.html',context)            
+        
+    return render(request,'ParkingDetails.html',context)
