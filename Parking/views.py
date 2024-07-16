@@ -128,9 +128,13 @@ def Parking_details(request):
             
                 parking.parking_space.occupied=True
                 parking.parking_space.save()
+                vehicle_obj.parked=True
+                vehicle_obj.save()
             else:
                 parking.parking_space.occupied=False
                 parking.parking_space.save()
+                vehicle_obj.parked=False
+                vehicle_obj.save()
                 # context['error']='Vehicle is already parked'
         
         if parking_obj.occupied:
