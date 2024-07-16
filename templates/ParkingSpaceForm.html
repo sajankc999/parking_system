@@ -33,7 +33,15 @@
         </div>
         <div class="form-check">
           <label  class="form-label">occupied</label>
-          <input type="checkbox" class="form-check-input" name ="occupied" value={{obj.occupied}} checked={{obj.occupied}}>
+          {% if obj.occupied %}
+
+          <input type="checkbox" class="form-check-input" name ="occupied" value="on" checked>
+          {% else %}
+          <input type="checkbox" class="form-check-input" name ="occupied" value="on" >
+
+          {% endif %}
+
+
         </div>
         
         
