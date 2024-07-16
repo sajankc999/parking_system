@@ -13,7 +13,8 @@ urlpatterns = [
     path('vehicle_details/edit/<pk>',VehicleDetailEdit,name="vehicle_name_edit"),
     path('vehicle_details/delete/<pk>',VehicleDetailDelete,name="vehicle_name_delete"),
 
-    path('parking-details/',Parking_details,name='parking-details')
+    path('parking-details/',Parking_details,name='parking-details'),
 
+    path('home/',home,name='home')
 
 ]

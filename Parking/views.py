@@ -144,3 +144,7 @@ def Parking_details(request):
             return render(request,'ParkingDetails.html',context)            
         
     return render(request,'ParkingDetails.html',context)
+
+
+def home(request):
+    return render(request,'home.html')
