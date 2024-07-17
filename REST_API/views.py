@@ -9,7 +9,11 @@ from .pagination import *
 from django_filters.rest_framework import DjangoFilterBackend 
 from rest_framework import filters
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated,IsAdminUser
+from django.contrib.auth import get_user_model
+from .permissions import *
+
+user = get_user_model()
 
 """model view for CRUD operation of parking space"""
 class ParkingSpaceView(ModelViewSet):
@@ -18,7 +22,19 @@ class ParkingSpaceView(ModelViewSet):
     pagination_class = ParkingSpacePagination
     filter_backends=[DjangoFilterBackend]
     filterset_fields = ['occupied', 'name','number']
+
+
+    def get_permissions(self):
+        if self.action == 'list' or self.action == 'retrieve':
+            permission_classes = [IsAuthenticated, IsCustomer | IsAdminUser]
+        elif self.action == 'create':
+            permission_classes = [IsAuthenticated, IsEmployee | IsAdminUser]
+        else:
+            permission_classes = [IsAuthenticated, IsAdminUser]
+        return [permission() for permission in permission_classes]
     
+
+
 
 """modelviewset for CRUD operation of vehivle information"""
 class Vehicle_infoView(ModelViewSet):
