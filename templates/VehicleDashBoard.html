@@ -1,13 +1,14 @@
 {% extends "index.html" %}
 
 {% block index %}
-<h1>Vehicle Info</h1> <a href="/parking/vehicle_details/create/" class='btn btn-success'>add</a>
+<h1>Vehicle Info</h1> <a href={% url "vehicle_name_create" %} class='btn btn-success'>add</a>
 <table class="table">
     <thead>
       <tr>
         <th scope="col">S.N</th>
         <th scope="col">Type</th>
         <th scope="col">plate no</th>
+        <th scope="col">parked</th>
       </tr>
     </thead>
     <tbody>
@@ -16,10 +17,15 @@
           <td>{{forloop.counter}}</td>
           <td>{{ob.type}}</td>
           <td>{{ob.plate_no}}</td>
+          <td>{% if ob.parked %}
+            ✅
+            {% else %}
+            ✖ 
+            {% endif %}</td>
           <td>
-              <a href="/parking/vehicle_details/info/{{ob.id}}" class='btn btn-success'>info</a>
-              <a href="/parking/vehicle_details/edit/{{ob.id}}" class='btn btn-primary'>change</a>
-              <a href="/parking/vehicle_details/delete/{{ob.id}}" class='btn btn-danger'>delete</a>
+              <a href={% url "vehicle_name_info" ob.id %} class='btn btn-success'>info</a>
+              <a href={% url "vehicle_name_edit" ob.id %} class='btn btn-primary'>change</a>
+              <a href={% url "vehicle_name_delete" ob.id %} class='btn btn-danger'>delete</a>
             </td>
         </tr>
 {% endfor %}

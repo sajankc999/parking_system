@@ -1,0 +1,95 @@
+{% extends "index.html" %}
+
+{% block index %}
+<center>
+  <h1>Parking Details</h1>
+</center>
+<!-- Button trigger modal -->
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+  Create
+</button>
+
+<!-- Modal -->
+<div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="staticBackdropLabel">CREATE PARKING</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+    
+        <form method="post" class="container p-3 mx-auto border-bottom shadow-sm p-3 mb-5 bg-body-tertiary rounded">
+          {% csrf_token %}
+        <div class='form-control p-3 mx-auto'>
+            
+          <label for="parking_space">Choose a parking space:</label>
+              <select name="parking_space_user" id="parking_space">
+                {% for ps in parking_space  %}
+                <option value="{{ps.id}}">{{ps}}</option>
+                {% endfor %}
+              </select>
+          </div>
+          <div class='form-control p-3 mx-auto'>
+            <label for="cars">Choose Vehicle:</label>
+            <select name="vehicle_info_user" id="vehicle_info">
+              {% for ps in vehicle_info  %}
+              <option value="{{ps.id}}">{{ps}}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <label for="check_out_date">
+
+            Checkout Time:
+          </label>
+          <input type="datetime-local" name='checkout_time'>
+          <div class='p-2 mx-auto '>
+
+            <button type='submit' class='btn btn-success'>create</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </form>
+
+      </div>
+      <div class="modal-footer">
+      </div>
+    </div>
+  </div>
+</div>
+{% if success %}
+<div class="alert alert-success" role="alert">
+ {{success}}
+</div>
+{% elif error %}
+<div class="alert alert-danger" role="alert">
+  {{error}}
+</div>
+{% endif %}
+<table class="table table-dark table-striped">
+    <thead>
+      <tr>
+        <th scope="col">S.N</th>
+        <th scope="col">Parking space</th>
+        <th scope="col">Vehicle_info</th>
+        <th scope="col">token</th>
+        <th scope="col">created_at</th>
+        <th scope="col">checkin_time</th>
+        <th scope="col">checkout_time</th>
+      </tr>
+    </thead>
+    <tbody>
+{% for query in queryset   %}
+      <tr>
+          <th scope="row">{{forloop.counter}}</th>
+          <td><a href={% url "parking_space_info" query.parking_space.id %}>{{query.parking_space}}</a></td>
+          <td><a href={% url "vehicle_name_info" query.vehicle_info.id %}>{{query.vehicle_info}}</a></td>
+          <td>{{query.token}}</td>
+          <td>{{query.created_at}}</td>
+          <td>{{query.checkin_time}}</td>
+          <td>{{query.checkout_time}}</td>
+          
+        </tr>
+{% endfor %}
+    </tbody>
+  </table>
+{% endblock index %}
+
