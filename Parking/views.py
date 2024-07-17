@@ -104,7 +104,7 @@ def VehicleDetailDelete(request,pk):
     return redirect('vehicle_name')
 
 
-def Parking_details(request):
+def parking_details(request):
     context ={}
     queryset = ParkingDetails.objects.all().order_by('created_at')
     vehicle_info=Vehicle_info.objects.filter(parked=False)
