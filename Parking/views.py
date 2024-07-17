@@ -7,7 +7,7 @@ from .models import *
 def ParkingSpaceView(request):
     context={}
     if request.method=="GET":
-        model = ParkingSpace.objects.all()
+        model = ParkingSpace.objects.all().order_by('occupied')
         context={"model":model}
     return render(request,'parkingspace.html',context=context)
 
@@ -76,7 +76,7 @@ def VehicleDetailsAdd(request):
 def VehicleDetailsView(request):
     context={}
     if request.method=="GET":
-        obj = Vehicle_info.objects.all()
+        obj = Vehicle_info.objects.all().order_by('parked')
         context={'obj':obj,}
     return render(request,"VehicleDashBoard.html",context=context)
 

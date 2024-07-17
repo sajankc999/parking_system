@@ -1,12 +1,12 @@
-from rest_framework.routers import SimpleRouter
+from rest_framework.routers import DefaultRouter
 from .views import *
+from django.urls import path,include
+router = DefaultRouter()
 
-router = SimpleRouter()
-
-router.register('parking_space',ParkingSpaceView,basename='parking-space')
-router.register('vehicle_info',Vehicle_infoView,basename='vehicel-info')
-router.register('parking-details',ParkingDetailsView,basename='parking-details')
+router.register(r'parking_space',ParkingSpaceView,basename='parking-space')
+router.register(r'vehicle_info',Vehicle_infoView,basename='vehicel-info')
+router.register(r'parking-details',ParkingDetailsView,basename='parking-details')
 
 urlpatterns = [
-    
-]+router.urls
+    path('',include(router.urls))
+]
