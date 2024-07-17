@@ -9,21 +9,30 @@ from .pagination import *
 from django_filters.rest_framework import DjangoFilterBackend 
 from rest_framework import filters
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+
+"""model view for CRUD operation of parking space"""
 class ParkingSpaceView(ModelViewSet):
     queryset = ParkingSpace.objects.all()
     serializer_class=ParkingSpaceSerializer
     pagination_class = ParkingSpacePagination
     filter_backends=[DjangoFilterBackend]
     filterset_fields = ['occupied', 'name','number']
+    
 
-
-
+"""modelviewset for CRUD operation of vehivle information"""
 class Vehicle_infoView(ModelViewSet):
     queryset = Vehicle_info.objects.all()
     serializer_class = Vehicle_infoSerializer
+    permission_classes = [IsAuthenticated]
+
     pagination_class=VehicleInfoPagination
     filter_backends=[DjangoFilterBackend,]
     filterset_fields = ['type', 'plate_no','parked']
+
+
+"""class view for creating and listing parking details
+ /// parked field in vehicel_info class and ocupied in parking space class is set to be true after creations"""
 class ParkingDetailsView(generics.ListCreateAPIView):
     queryset=ParkingDetails.objects.all()
     serializer_class = ParkingDetailsSerializer
@@ -32,11 +41,7 @@ class ParkingDetailsView(generics.ListCreateAPIView):
     filterset_fields = ['parking_space', 'vehicle_info']
     ordering_fields =['checkin_time','checkout_time']
 
-    def update(self, request, *args, **kwargs):
-        raise Response("method not allowed")
-    
-    def destroy(self, request, *args, **kwargs):
-        return Response('method not allowed')
+
     
     def create(self, request, *args, **kwargs):
         data = request.data
