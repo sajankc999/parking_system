@@ -121,8 +121,8 @@ def Parking_details(request):
         parking_obj = ParkingSpace.objects.filter(pk=parking_space_id).first()
         
         
-        if ParkingDetails.objects.filter(vehicle_info=vehicle_info_id).exists():
-            parking =ParkingDetails.objects.filter(vehicle_info=vehicle_info_id).first()
+        if parking:=ParkingDetails.objects.filter(vehicle_info=vehicle_info_id).exists():
+            # ParkingDetails.objects.filter(vehicle_info=vehicle_info_id).first()
             # Check if parking.checkout_time is timezone-aware
             if parking.checkout_time > timezone.now():
             
@@ -142,7 +142,7 @@ def Parking_details(request):
         else:
             ParkingDetails.objects.create(parking_space=parking_obj,
                                             vehicle_info=vehicle_obj,
-                                           checkout_time=checkout_time).save()
+                                           checkout_time=checkout_time)
             
             vehicle_obj.parked=True
             vehicle_obj.save()

@@ -15,6 +15,6 @@ urlpatterns = [
 
     path('parking-details/',Parking_details,name='parking-details'),
 
-    path('home/',home,name='home')
+    path('',home,name='home')
 
 ]
