@@ -10,7 +10,6 @@ class UserView(generics.CreateAPIView):
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
 
-    def perform_create(self, serializer):
-        return super().perform_create(serializer)
+
 
     

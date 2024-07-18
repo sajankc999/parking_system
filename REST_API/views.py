@@ -9,7 +9,7 @@ from .pagination import *
 from django_filters.rest_framework import DjangoFilterBackend 
 from rest_framework import filters
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated,IsAdminUser
+from rest_framework.permissions import IsAuthenticatedOrReadOnly,IsAuthenticated
 from django.contrib.auth import get_user_model
 from .permissions import *
 
@@ -22,29 +22,51 @@ class ParkingSpaceView(ModelViewSet):
     pagination_class = ParkingSpacePagination
     filter_backends=[DjangoFilterBackend]
     filterset_fields = ['occupied', 'name','number']
-
+    permission_classes = [IsAuthenticated, IsCustomer | IsEmployee | IsSuperUser]
 
     def get_permissions(self):
         if self.action == 'list' or self.action == 'retrieve':
-            permission_classes = [IsAuthenticated, IsCustomer | IsAdminUser]
-        elif self.action == 'create':
-            permission_classes = [IsAuthenticated, IsEmployee | IsAdminUser]
+            permission_classes = [IsAuthenticated, IsCustomer | IsSuperUser]
+        elif self.action == 'create' or self.action == 'destroy'or self.action == 'update':
+            permission_classes = [IsAuthenticated, IsEmployee | IsSuperUser]
         else:
-            permission_classes = [IsAuthenticated, IsAdminUser]
+            permission_classes = [IsAuthenticated, IsSuperUser]
         return [permission() for permission in permission_classes]
-    
-
+  
 
 
 """modelviewset for CRUD operation of vehivle information"""
 class Vehicle_infoView(ModelViewSet):
-    queryset = Vehicle_info.objects.all()
+    
     serializer_class = Vehicle_infoSerializer
     permission_classes = [IsAuthenticated]
 
     pagination_class=VehicleInfoPagination
     filter_backends=[DjangoFilterBackend,]
     filterset_fields = ['type', 'plate_no','parked']
+
+    def get_queryset(self):
+        user=self.request.user
+        # raise Exception(user)
+        if user.customer:
+            return Vehicle_info.objects.filter(user =user )
+        if user.is_staff or user.is_superuser:
+            return Vehicle_info.objects.all()
+
+    def create(self, request, *args, **kwargs):
+        # raise Exception(self.request.user)
+        user = self.request.user
+        serializer = self.get_serializer(data = request.data)
+        
+        if serializer.is_valid(raise_exception=True):
+            data = serializer.validated_data
+            # raise Exception(data)
+            vehicle_info = Vehicle_info.objects.filter(user=user).filter(plate_no=data['plate_no'])
+            if not vehicle_info:
+                Vehicle_info.objects.create(**data)
+                return Response("vehicle added",status=status.HTTP_201_CREATED)
+            return Response('vehicle already exists',status=status.HTTP_400_BAD_REQUEST)
+        
 
 
 """class view for creating and listing parking details
@@ -56,12 +78,27 @@ class ParkingDetailsView(generics.ListCreateAPIView):
     filter_backends=[DjangoFilterBackend,filters.OrderingFilter]
     filterset_fields = ['parking_space', 'vehicle_info']
     ordering_fields =['checkin_time','checkout_time']
-
-
+    permission_classes =[IsAuthenticated, IsCustomer | IsEmployee | IsSuperUser]
+    def get_queryset(self):
+        user = self.request.user
+        if user.customer:
+            return ParkingDetails.objects.filter(user=user).order_by('created_at')
+        if user.is_staff or user.is_superuser:
+            return self.queryset
+        return Response('something went wrong')
+    
+    def get_permissions(self):
+        if self.action == 'list' or self.action == 'retrieve':
+            permission_classes = [IsAuthenticated, IsCustomer | IsSuperUser]
+        elif self.action == 'create' or self.action == 'destroy'or self.action == 'update':
+            permission_classes = [IsAuthenticated, IsEmployee | IsSuperUser]
+        else:
+            permission_classes = [IsAuthenticated, IsSuperUser]
+        return [permission() for permission in permission_classes]
     
     def create(self, request, *args, **kwargs):
         data = request.data
-        serializer = ParkingDetailsSerializer(data=data)
+        serializer = self.get_serializer(data=data)
         if serializer.is_valid(raise_exception=True):
             parking_space_id = data.get('parking_space')
             vehicle_info_id=data.get('vehicle_info')

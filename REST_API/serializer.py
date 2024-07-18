@@ -15,6 +15,7 @@ class ParkingSpaceSerializer(serializers.ModelSerializer):
     
 
 class Vehicle_infoSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     class Meta:
         model = Vehicle_info
         fields = "__all__"
