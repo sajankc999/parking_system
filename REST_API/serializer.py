@@ -1,6 +1,11 @@
 from rest_framework import serializers
 
-from .models import *
+from REST_API.models import *
+
+"""
+Class serializer for ParkingSpace.
+"""
+
 
 class ParkingSpaceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -8,17 +13,31 @@ class ParkingSpaceSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def validate(self, attrs):
-        if len(attrs['number'])<0 or len(attrs['number']>10):
+        if len(attrs["number"]) < 0 or len(attrs["number"] > 10):
             raise serializers.ValidationError
         return attrs
-    
-    
+
+
+"""
+Class Serializer for vehicel info.
+
+"""
+
 
 class Vehicle_infoSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
     class Meta:
         model = Vehicle_info
         fields = "__all__"
+
+
+"""
+
+Class serializer for parking details.
+
+"""
+
 
 class ParkingDetailsSerializer(serializers.ModelSerializer):
     class Meta:

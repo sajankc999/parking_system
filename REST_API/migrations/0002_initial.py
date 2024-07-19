@@ -10,19 +10,23 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('REST_API', '0001_initial'),
+        ("REST_API", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='vehicle_info',
-            name='user',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
+            model_name="vehicle_info",
+            name="user",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL
+            ),
         ),
         migrations.AddField(
-            model_name='parkingdetails',
-            name='vehicle_info',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='REST_API.vehicle_info'),
+            model_name="parkingdetails",
+            name="vehicle_info",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="REST_API.vehicle_info"
+            ),
         ),
     ]

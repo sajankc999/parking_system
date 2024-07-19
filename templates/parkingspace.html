@@ -10,9 +10,9 @@
             <th scope="col">name</th>
             <th scope="col">number</th>
             <th scope="col">rate</th>
-            <th scope="col">occupied</th> 
-            <th scope="col">actions</th> 
-            
+            <th scope="col">occupied</th>
+            <th scope="col">actions</th>
+
           </tr>
         </thead>
         <tbody>
@@ -30,7 +30,7 @@
                 {%else%}
                 ✘
                 {% endif %}
-                
+
 
             </td>
             <td>
@@ -38,13 +38,13 @@
                 <a href={% url "parking_space_edit" mod.id%} class='btn btn-primary'>change</a>
                 <a href={% url "parking_space_delete" mod.id %} class='btn btn-danger'>delete</a>
             </td>
-          
+
           </tr>
-          
+
           {% endfor %}
         </tbody>
       </table>
 
-      
+
 
 {% endblock index %}
