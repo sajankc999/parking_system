@@ -13,7 +13,8 @@ class ParkingSpaceSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def validate(self, attrs):
-        if len(attrs["number"]) < 0 or len(attrs["number"] > 10):
+        number = attrs["number"]
+        if (number) < 0 or (number > 10):
             raise serializers.ValidationError
         return attrs
 

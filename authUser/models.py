@@ -14,6 +14,16 @@ class CustomUserManager(UserManager):
             raise ValueError("Superuser must have is_superuser=True.")
         return self._create_user(username, email, password, **extra_fields)
 
+    def create_employee(self, username, email=None, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", False)
+        extra_fields.setdefault("customer", False)
+        extra_fields.setdefault("employee", True)
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("employee must have is_staff=True.")
+
+        return self._create_user(username, email, password, **extra_fields)
+
 
 class User(AbstractUser):
     username = models.CharField(max_length=100, unique=True)

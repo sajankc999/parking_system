@@ -23,12 +23,15 @@ class ParkingSpaceView(ModelViewSet):
     pagination_class = ParkingSpacePagination
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["occupied", "name", "number"]
-    permission_classes = [IsAuthenticated,
-                          IsCustomer | IsEmployee | IsSuperUser]
+    permission_classes = [
+        IsAuthenticatedOrReadOnly,
+        IsCustomer | IsEmployee | IsSuperUser,
+    ]
 
     def get_permissions(self):
         if self.action == "list" or self.action == "retrieve":
-            permission_classes = [IsAuthenticated, IsCustomer | IsSuperUser]
+            permission_classes = [
+                IsAuthenticatedOrReadOnly, IsCustomer | IsSuperUser]
         elif (
             self.action == "create"
             or self.action == "destroy"
@@ -70,7 +73,7 @@ class Vehicle_infoView(ModelViewSet):
         if serializer.is_valid(raise_exception=True):
             data = serializer.validated_data
             # raise Exception(data)
-            vehicle_info = Vehicle_info.objects.filter(user=user).filter(
+            vehicle_info = Vehicle_info.objects.filter(
                 plate_no=data["plate_no"]
             )
             if not vehicle_info:
@@ -98,68 +101,70 @@ class ParkingDetailsView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         if user.customer:
-            return ParkingDetails.objects.filter(user=user).order_by("created_at")
+            return ParkingDetails.objects.filter(vehicle_info__user=user).order_by("created_at")
         if user.is_staff or user.is_superuser:
             return self.queryset
         return Response("something went wrong")
 
     def get_permissions(self):
-        if self.action == "list" or self.action == "retrieve":
-            permission_classes = [IsAuthenticated, IsCustomer | IsSuperUser]
-        elif (
-            self.action == "create"
-            or self.action == "destroy"
-            or self.action == "update"
+        # if self.request.method in ['list','retrieve']:
+        #     permission_classes = [IsAuthenticated, IsCustomer | IsSuperUser | IsEmployee]
+        if (
+            self.request.method in ['create', 'delete', 'update']
+
         ):
-            permission_classes = [IsAuthenticated, IsEmployee | IsSuperUser]
+            permission_classes = [IsEmployee | IsSuperUser]
         else:
-            permission_classes = [IsAuthenticated, IsSuperUser]
+            permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
 
     def create(self, request, *args, **kwargs):
         data = request.data
-        serializer = self.get_serializer(data=data)
-        if serializer.is_valid(raise_exception=True):
-            parking_space_id = data.get("parking_space")
-            vehicle_info_id = data.get("vehicle_info")
-            checkout_time = data.get("checkout_time")
-            # raise Exception(parking_space,vehicle_info)
-            vehicle_obj = Vehicle_info.objects.filter(
-                pk=vehicle_info_id).first()
-            parking_obj = ParkingSpace.objects.filter(
-                pk=parking_space_id).first()
+        if request.user.is_superuser or request.user.employee:
+            serializer = self.get_serializer(data=data)
+            if serializer.is_valid(raise_exception=True):
+                parking_space_id = data.get("parking_space")
+                vehicle_info_id = data.get("vehicle_info")
+                checkout_time = data.get("checkout_time")
+                # raise Exception(parking_space,vehicle_info)
+                vehicle_obj = Vehicle_info.objects.filter(
+                    pk=vehicle_info_id).first()
+                parking_obj = ParkingSpace.objects.filter(
+                    pk=parking_space_id).first()
 
-            parking = ParkingDetails.objects.filter(
-                vehicle_info=vehicle_info_id
-            ).first()
-            if parking:
-                # ParkingDetails.objects.filter(vehicle_info=vehicle_info_id).first()
-                # Check if parking.checkout_time is timezone-aware
-                if parking.checkout_time > timezone.now():
+                parking = ParkingDetails.objects.filter(
+                    vehicle_info=vehicle_info_id
+                ).first()
+                if parking:
+                    # ParkingDetails.objects.filter(vehicle_info=vehicle_info_id).first()
+                    # Check if parking.checkout_time is timezone-aware
+                    if parking.checkout_time > timezone.now():
 
-                    parking.parking_space.occupied = True
-                    parking.parking_space.save()
+                        parking.parking_space.occupied = True
+                        parking.parking_space.save()
+                        vehicle_obj.parked = True
+                        vehicle_obj.save()
+                    else:
+                        parking.parking_space.occupied = False
+                        parking.parking_space.save()
+                        vehicle_obj.parked = False
+                        vehicle_obj.save()
+                        # context['error']='Vehicle is already parked'
+
+                if parking_obj.occupied:
+                    return Response("parking spot is occupied", status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    ParkingDetails.objects.create(
+                        parking_space=parking_obj,
+                        vehicle_info=vehicle_obj,
+                        checkout_time=checkout_time,
+                    )
+
                     vehicle_obj.parked = True
                     vehicle_obj.save()
-                else:
-                    parking.parking_space.occupied = False
-                    parking.parking_space.save()
-                    vehicle_obj.parked = False
-                    vehicle_obj.save()
-                    # context['error']='Vehicle is already parked'
-
-            if parking_obj.occupied:
-                return Response("parking spot is occupied")
-            else:
-                ParkingDetails.objects.create(
-                    parking_space=parking_obj,
-                    vehicle_info=vehicle_obj,
-                    checkout_time=checkout_time,
-                )
-
-                vehicle_obj.parked = True
-                vehicle_obj.save()
-                parking_obj.occupied = True
-                parking_obj.save()
-                return Response(status=status.HTTP_201_CREATED)
-                # return render(request,'ParkingDetails.html',context)
+                    parking_obj.occupied = True
+                    parking_obj.save()
+                    return Response(status=status.HTTP_201_CREATED)
+                    # return render(request,'ParkingDetails.html',context)
+        else:
+            return Response('you dont have permission', status=status.HTTP_401_UNAUTHORIZED)

@@ -9,7 +9,7 @@ Permission Class for customer
 
 class IsCustomer(BasePermission):
     def has_permission(self, request, view):
-        return request.user.customer
+        return request.user and request.user.customer
 
 
 """
