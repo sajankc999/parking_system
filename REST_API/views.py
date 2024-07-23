@@ -23,24 +23,26 @@ class ParkingSpaceView(ModelViewSet):
     pagination_class = ParkingSpacePagination
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["occupied", "name", "number"]
-    permission_classes = [
-        IsAuthenticatedOrReadOnly,
-        IsCustomer | IsEmployee | IsSuperUser,
-    ]
 
-    def get_permissions(self):
-        if self.action == "list" or self.action == "retrieve":
-            permission_classes = [
-                IsAuthenticatedOrReadOnly, IsCustomer | IsSuperUser]
-        elif (
-            self.action == "create"
-            or self.action == "destroy"
-            or self.action == "update"
-        ):
-            permission_classes = [IsAuthenticated, IsEmployee | IsSuperUser]
+    def create(self, request, *args, **kwargs):
+        if self.request.user.is_anonymous:
+            return Response('login required', status=status.HTTP_401_UNAUTHORIZED)
+        if self.request.user.is_superuser or self.request.user.employee:
+            return super().create(request, *args, **kwargs)
         else:
-            permission_classes = [IsAuthenticated, IsSuperUser]
-        return [permission() for permission in permission_classes]
+            return Response('Unauthorized', status=status.HTTP_403_FORBIDDEN)
+
+    def update(self, request, *args, **kwargs):
+        if request.user.is_superuser or request.user.employee:
+            return super().update(request, *args, **kwargs)
+        return Response('unauthorized', status=status.HTTP_403_FORBIDDEN
+                        )
+
+    def destroy(self, request, *args, **kwargs):
+        if request.user.is_superuser or request.user.employee:
+            return super().destroy(request, *args, **kwargs)
+        return Response('unauthorized', status=status.HTTP_403_FORBIDDEN
+                        )
 
 
 """modelviewset for CRUD operation of vehivle information"""
@@ -95,8 +97,6 @@ class ParkingDetailsView(generics.ListCreateAPIView):
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["parking_space", "vehicle_info"]
     ordering_fields = ["checkin_time", "checkout_time"]
-    permission_classes = [IsAuthenticated,
-                          IsCustomer | IsEmployee | IsSuperUser]
 
     def get_queryset(self):
         user = self.request.user
@@ -105,18 +105,6 @@ class ParkingDetailsView(generics.ListCreateAPIView):
         if user.is_staff or user.is_superuser:
             return self.queryset
         return Response("something went wrong")
-
-    def get_permissions(self):
-        # if self.request.method in ['list','retrieve']:
-        #     permission_classes = [IsAuthenticated, IsCustomer | IsSuperUser | IsEmployee]
-        if (
-            self.request.method in ['create', 'delete', 'update']
-
-        ):
-            permission_classes = [IsEmployee | IsSuperUser]
-        else:
-            permission_classes = [IsAuthenticated]
-        return [permission() for permission in permission_classes]
 
     def create(self, request, *args, **kwargs):
         data = request.data
@@ -166,5 +154,7 @@ class ParkingDetailsView(generics.ListCreateAPIView):
                     parking_obj.save()
                     return Response(status=status.HTTP_201_CREATED)
                     # return render(request,'ParkingDetails.html',context)
+            else:
+                return Response('Bad data', status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response('you dont have permission', status=status.HTTP_401_UNAUTHORIZED)
+            return Response('you dont have permission', status=status.HTTP_403_FORBIDDEN)

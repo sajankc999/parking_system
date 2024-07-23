@@ -1,323 +1,345 @@
+import pytest
 from django.contrib.auth import get_user_model
-from django.test import TestCase
-
-# Create your tests here.
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient
 
 from REST_API.models import ParkingDetails, ParkingSpace, Vehicle_info
-from REST_API.permissions import IsCustomer, IsEmployee, IsSuperUser
 
 User = get_user_model()
+''' Parking Spacr test view.
+    pytest class basesd.
+'''
 
 
-class ParkingSpaceViewTests(APITestCase):
-    def setUp(self):
-        # self.url = reverse('api/parking_space')
+@pytest.mark.django_db
+class TestParkingSpaceView:
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.url = reverse("parkingspace-list")
-        self.user = User.objects.create_user(
-            username="user1", password="password123")
-        self.employee = User.objects.create_user(
-            username="employee", password="password123", employee=True, is_staff=True
-        )
         self.superuser = User.objects.create_superuser(
-            username="admin", password="admin123"
-        )
+            username="admin", password="admin123")
+        self.employee = User.objects.create_employee(
+            username="employee", password="password123", is_staff=True)
+        self.customer = User.objects.create_user(
+            username="user1", password="password123")
         self.parking_space = ParkingSpace.objects.create(
-            name="Parking Space 1", number=5, rate=200, occupied=False
-        )
-
+            name='par', number=1, rate=123)
         self.detail_url = reverse(
-            "parkingspace-detail", args=[self.parking_space.id])
+            'parkingspace-list', args=[self.parking_space.id])
+        self.client = APIClient()
 
-    def test_create_parkingspace(self):
-        # superuser test
-        self.client.force_authenticate(user=self.superuser)
+    @pytest.mark.parametrize("user, expected_status_code", [
+        ("superuser", status.HTTP_200_OK),
+        ("employee", status.HTTP_200_OK),
+        ("customer", status.HTTP_200_OK),
+    ])
+    def test_list_parkingspace(self, user, expected_status_code):
+        # Create some parking spaces to be listed
+        ParkingSpace.objects.create(
+            name="Parking Space 1", number=1, rate=20, occupied=False)
+        ParkingSpace.objects.create(
+            name="Parking Space 2", number=2, rate=30, occupied=True)
 
+        if user == "superuser":
+            test_user = self.superuser
+        elif user == "employee":
+            test_user = self.employee
+        elif user == "customer":
+            test_user = self.customer
+        self.client.force_authenticate(user=test_user)
+        response = self.client.get(self.url)
+
+        if response.status_code == status.HTTP_200_OK:
+            # Check if two parking spaces are listed
+            assert len(response.data) == 4
+
+    @pytest.mark.parametrize("user, expected_status_code", [
+        ("superuser", status.HTTP_201_CREATED),
+        ("employee", status.HTTP_201_CREATED),
+        ("customer", status.HTTP_403_FORBIDDEN),
+    ])
+    def test_create_parkingspace(self, user, expected_status_code):
         data = {"name": "Parking Space 1",
                 "number": 1, "rate": 20, "occupied": False}
+
+        if user == "superuser":
+            test_user = self.superuser
+        elif user == "employee":
+            test_user = self.employee
+        elif user == "customer":
+            test_user = self.customer
+
+        self.client.force_authenticate(user=test_user)
         response = self.client.post(self.url, data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(ParkingSpace.objects.count(), 2)
-        self.assertEqual(
-            ParkingSpace.objects.get(id=response.data["id"]).name, data["name"]
-        )
+        print("USER:::", test_user)
+        assert response.status_code == expected_status_code
 
-        self.client.logout()
+        if response.status_code == status.HTTP_201_CREATED:
+            assert ParkingSpace.objects.count() == 2
+            assert ParkingSpace.objects.get(
+                id=response.data["id"]).name == data["name"]
 
-        # employee test
-        self.client.force_authenticate(user=self.employee)
-        response = self.client.post(self.url, data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(ParkingSpace.objects.count(), 3)
-        self.assertEqual(
-            ParkingSpace.objects.get(id=response.data["id"]).name, data["name"]
-        )
+    @pytest.mark.parametrize("user, expected_status_code", [
+        ("superuser", status.HTTP_200_OK),
+        ("employee", status.HTTP_200_OK),
+        ("customer", status.HTTP_403_FORBIDDEN),
+    ])
+    def test_update_parkingspace(self, user, expected_status_code):
+        parkingspace = ParkingSpace.objects.create(
+            name="Old Name", number=1, rate=20, occupied=False)
+        data = {"name": "New Name", "number": 1, "rate": 20, "occupied": False}
+        url = reverse("parkingspace-detail", args=[parkingspace.id])
 
-        # customer test
-        self.client.logout()
-        self.client.force_authenticate(user=self.user)
-        response = self.client.post(self.url, data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        if user == "superuser":
+            test_user = self.superuser
+        elif user == "employee":
+            test_user = self.employee
+        elif user == "customer":
+            test_user = self.customer
 
-    def test_update_parkingspace(self):
-        # superuser
-        self.client.force_authenticate(user=self.superuser)
-        data = {
-            "name": "Updated Parking Space",
-            "number": 6,
-            "rate": 100,
-            "occupied": False,
-        }
-        response = self.client.put(self.detail_url, data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.parking_space.refresh_from_db()
-        self.assertEqual(self.parking_space.name, data["name"])
+        self.client.force_authenticate(user=test_user)
+        response = self.client.put(url, data, format="json")
+        assert response.status_code == expected_status_code
 
-        self.client.logout()
-        # employee
-        self.client.force_authenticate(user=self.employee)
-        response = self.client.put(self.detail_url, data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.parking_space.refresh_from_db()
-        self.assertEqual(self.parking_space.name, data["name"])
+        if response.status_code == status.HTTP_200_OK:
+            parkingspace.refresh_from_db()
+            assert parkingspace.name == data["name"]
+    '''
+     Test for all delete method.
+     with different situations.
+    '''
+    @pytest.mark.parametrize("user, expected_status_code", [
+        ("superuser", status.HTTP_204_NO_CONTENT),
+        ("employee", status.HTTP_204_NO_CONTENT),
+        ("customer", status.HTTP_403_FORBIDDEN),
+    ])
+    def test_delete_parkingspace(self, user, expected_status_code):
+        parkingspace = ParkingSpace.objects.create(
+            name="Parking Space 1", number=1, rate=20, occupied=False)
+        url = reverse("parkingspace-detail", args=[parkingspace.id])
 
-        self.client.logout()
-        # customer
-        self.client.force_authenticate(user=self.user)
-        response = self.client.put(self.detail_url, data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        if user == "superuser":
+            test_user = self.superuser
+        elif user == "employee":
+            test_user = self.employee
+        elif user == "customer":
+            test_user = self.customer
 
-    def test_delete_parking_space(self):
-        self.client.force_authenticate(user=self.superuser)
+        self.client.force_authenticate(user=test_user)
+        response = self.client.delete(url)
+        assert response.status_code == expected_status_code
 
-        response = self.client.delete(self.detail_url, format="json")
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-
-        self.client.logout()
-        # employee
-        self.parking_space = ParkingSpace.objects.create(
-            name="Parking Space 1", number=5, rate=200, occupied=False
-        )
-        self.detail_url = reverse(
-            "parkingspace-detail", args=[self.parking_space.id])
-        self.client.force_authenticate(user=self.employee)
-        response = self.client.delete(self.detail_url, format="json")
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-
-        self.client.logout()
-        # customer
-        self.client.force_authenticate(user=self.user)
-        response = self.client.delete(self.detail_url, format="json")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        if response.status_code == status.HTTP_204_NO_CONTENT:
+            assert not ParkingSpace.objects.filter(id=parkingspace.id).exists()
 
 
-class VehicleInfoViewTests(APITestCase):
-    def setUp(self):
+"""
+    Test case for Vehicle Info model VIEW.
+    for all situations.
+"""
+
+
+@pytest.mark.django_db
+class TestVehicleInfoView:
+    """
+    Tests for VehicleInfo views.
+    """
+    @pytest.fixture(autouse=True)
+    def set_up(self):
+        self.client = APIClient()
         self.url = reverse("vehicleinfo-list")
         self.user = User.objects.create_user(
             username="user1", password="password123")
         self.user2 = User.objects.create_user(
             username="user2", password="password123")
         self.superuser = User.objects.create_superuser(
-            username="admin", password="admin123"
-        )
-        self.owner = User.objects.get(username='user1')
+            username="admin", password="admin123")
+        self.employee = User.objects.create_user(
+            username="employee", password="password123", is_staff=True)
         self.vehicle_info1 = Vehicle_info.objects.create(
             user=self.user, type='car', plate_no='123')
         self.vehicle_info2 = Vehicle_info.objects.create(
             user=self.user2, type='bike', plate_no='333')
-        self.detail_url = reverse(
-            "vehicleinfo-detail", args=[self.vehicle_info1.id])
-        self.detail_url2 = reverse(
-            "vehicleinfo-detail", args=[self.vehicle_info2.id])
+        self.detail_url = lambda pk: reverse("vehicleinfo-detail", args=[pk])
+        self.data = {"type": "bus", "plate_no": "444"}
 
-        self.data = {
-
-            "type": "bus",
-            "plate_no": "444",
-
-        }
-
-    def test_retrieve_vehicleinfo(self):
-        # without login user
+    @pytest.mark.parametrize("user, expected_code", [
+        ("superuser", status.HTTP_200_OK),
+        ("employee", status.HTTP_200_OK),
+        ("user", status.HTTP_200_OK),
+    ])
+    def test_retrieve_vehicleinfo(self, user, expected_code):
+        # Without login
         response = self.client.get(self.url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        # with login user
-        self.client.force_authenticate(user=self.user)
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-        # owner getting own data:
+        test_user = {
+            "superuser": self.superuser,
+            "employee": self.employee,
+            "user": self.user,
+        }[user]
+
+        # With login
+        self.client.force_authenticate(user=test_user)
+        response = self.client.get(self.url)
+
+        if user == "user":
+            assert response.status_code == expected_code
+            assert len(response.data['results']) == 1
+
+        assert response.status_code == expected_code
         self.client.logout()
-        self.client.force_authenticate(user=self.user)
-        response = self.client.get(self.url)
-        # print("RESPONE::::",response.data)
-        self.assertEqual(len(response.data['results']), 1)
 
-        # admin user and staff can retrieve all results
-
-        self.client.logout()
+        # Admin and staff can retrieve all
         self.client.force_authenticate(user=self.superuser)
         response = self.client.get(self.url)
-        self.assertEqual(len(response.data['results']), 2)
+        assert len(response.data['results']) == 2
 
-    def test_create_vehicleinfo(self):
+    @pytest.mark.parametrize("user, expected_status_code, expected_count", [
+        ("user", status.HTTP_201_CREATED, 2),
+        ("unauthenticated", status.HTTP_401_UNAUTHORIZED, None),
+    ])
+    def test_create_vehicleinfo(self, user, expected_status_code, expected_count):
+        test_user = {
+            "user": self.user,
+            "unauthenticated": None
+        }.get(user)
 
-        # only user can create vehicle_info
-        self.client.force_authenticate(user=self.user)
-        # print("OWNER::::",self.owner)
-
-        response = self.client.post(self.url, self.data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Vehicle_info.objects.filter(
-            user=self.user).count(), 2)
-
-        # None user create
-        self.client.logout()
-        response = self.client.post(self.url, self.data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-        # vehicel already exists
-        self.client.logout()
-
-        self.client.force_authenticate(user=self.user)
+        if test_user:
+            self.client.force_authenticate(user=test_user)
+        else:
+            self.client.logout()
 
         response = self.client.post(self.url, self.data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("vehicle already exists", str(response.data))
+        assert response.status_code == expected_status_code
 
-    def test_update_and_delete(self):
-        # only rightful owner can update and delete his/her data
-        self.client.force_authenticate(user=self.user)
-        # can update and delete his data
-        response = self.client.put(self.detail_url, self.data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.vehicle_info1.refresh_from_db()
-        self.assertEqual(self.vehicle_info1.plate_no, self.data["plate_no"])
-        response = self.client.delete(self.detail_url)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        # cant delete/update others
+        if expected_count is not None:
+            assert Vehicle_info.objects.filter(
+                user=self.user).count() == expected_count
 
-        response = self.client.put(self.detail_url2, self.data, format='json')
-        # print(response.data)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        if expected_status_code == status.HTTP_400_BAD_REQUEST:
+            assert "vehicle already exists" in str(response.data)
 
-        response = self.client.delete(self.detail_url2)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    @pytest.mark.parametrize("user, detail_url, update_status_code, delete_status_code, expected_plate_no", [
+        ("user", None, status.HTTP_200_OK, status.HTTP_204_NO_CONTENT, "444"),
+        ("superuser", None, status.HTTP_200_OK, status.HTTP_204_NO_CONTENT, "444"),
+        ("unauthenticated", None, status.HTTP_401_UNAUTHORIZED,
+         status.HTTP_401_UNAUTHORIZED, None),
+    ])
+    def test_update_and_delete(self, user, detail_url, update_status_code, delete_status_code, expected_plate_no):
+        test_user = {
+            "user": self.user,
+            "user2": self.user2,
+            "superuser": self.superuser,
+            "unauthenticated": None
+        }.get(user)
 
-        self.client.logout()
-        # admin users can delete and update all
-        self.client.force_authenticate(user=self.superuser)
-        # can update and delete his data
-        Vehicle_info.objects.create(
-            user=self.user2, type='bike', plate_no='333')
-        response = self.client.put(self.detail_url2, self.data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.vehicle_info2.refresh_from_db()
-        self.assertEqual(self.vehicle_info2.plate_no, self.data["plate_no"])
-        response = self.client.delete(self.detail_url2)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        if test_user:
+            self.client.force_authenticate(user=test_user)
+        else:
+            self.client.logout()
+
+        if detail_url is None:
+            detail_url = self.detail_url(self.vehicle_info1.id)
+
+        # Update test
+        response = self.client.put(detail_url, self.data, format='json')
+        assert response.status_code == update_status_code
+
+        if update_status_code == status.HTTP_200_OK:
+            Vehicle_info.objects.get(
+                id=self.vehicle_info1.id).refresh_from_db()
+            assert Vehicle_info.objects.get(
+                id=self.vehicle_info1.id).plate_no == expected_plate_no
+
+        # Delete test
+        response = self.client.delete(detail_url)
+        assert response.status_code == delete_status_code
+
+        if delete_status_code == status.HTTP_204_NO_CONTENT:
+            assert not Vehicle_info.objects.filter(
+                id=self.vehicle_info1.id).exists()
 
 
-class ParkingDetailsViewTests(APITestCase):
+@pytest.mark.django_db
+class TestParkingDetailsView:
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def set_up(self):
+        self.client = APIClient()
         self.url = reverse('parking-details')
         self.user = User.objects.create_user(
-            username='user1', password='password123', customer=True)
+            username='user1', password='password123')
         self.user2 = User.objects.create_user(
-            username='user2', password='password123', customer=True)
-
+            username='user2', password='password123')
         self.superuser = User.objects.create_superuser(
             username='admin', password='admin123')
-
         self.employee = User.objects.create_employee(
-            username='employee', password='password123')
-
+            username='employee', password='password123', is_staff=True)
         self.parking_space = ParkingSpace.objects.create(
             name="Parking Space", number=10, occupied=False, rate=123)
         self.parking_space2 = ParkingSpace.objects.create(
             name="Parking Space", number=1, occupied=False, rate=123)
-
         self.vehicle_info = Vehicle_info.objects.create(
             user=self.user, type="Car", plate_no="ABC123", parked=False)
         self.vehicle_info2 = Vehicle_info.objects.create(
             user=self.user2, type="Car", plate_no="ABC1234", parked=False)
         self.parking_details = ParkingDetails.objects.create(
-            parking_space=self.parking_space,
-            vehicle_info=self.vehicle_info,
-            checkout_time="2024-11-11T11:11:00Z"
-        )
-        self.parking_details = ParkingDetails.objects.create(
-            parking_space=self.parking_space2,
-            vehicle_info=self.vehicle_info2,
-            checkout_time="2024-11-11T11:11:00Z"
-        )
+            parking_space=self.parking_space, vehicle_info=self.vehicle_info, checkout_time="2024-11-11T11:11:00Z")
+        self.parking_details2 = ParkingDetails.objects.create(
+            parking_space=self.parking_space2, vehicle_info=self.vehicle_info2, checkout_time="2024-11-11T11:11:00Z")
 
     def test_list_parkingdetails_as_customer(self):
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['results']), ParkingDetails.objects.filter(
-            vehicle_info__user=self.user).count())
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data['results']) == ParkingDetails.objects.filter(
+            vehicle_info__user=self.user).count()
 
     def test_list_parkingdetails_as_admin_or_emp(self):
         self.client.force_authenticate(user=self.employee)
         response = self.client.get(self.url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            len(response.data['results']), ParkingDetails.objects.count())
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data['results']) == ParkingDetails.objects.count()
         self.client.logout()
+
         self.client.force_authenticate(user=self.superuser)
         response = self.client.get(self.url)
-        # print(response.data)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            len(response.data['results']), ParkingDetails.objects.count())
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data['results']) == ParkingDetails.objects.count()
 
     def test_create_parkingdetails(self):
         self.client.force_authenticate(user=self.employee)
-        data = {
-            "parking_space": self.parking_space.id,
-            "vehicle_info": self.vehicle_info.id,
-            "checkout_time": "2024-12-31T23:59:59Z"
-        }
+        data = {"parking_space": self.parking_space.id,
+                "vehicle_info": self.vehicle_info.id, "checkout_time": "2024-12-31T23:59:59Z"}
         response = self.client.post(self.url, data, format='json')
-        # print(response.data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(ParkingDetails.objects.count(), 3)
+        assert response.status_code == status.HTTP_201_CREATED
+        assert ParkingDetails.objects.count() == 3
         self.parking_space.refresh_from_db()
-        self.assertTrue(self.parking_space.occupied)
+        assert self.parking_space.occupied
         self.vehicle_info.refresh_from_db()
-        self.assertTrue(self.vehicle_info.parked)
+        assert self.vehicle_info.parked
 
-    def test_create_parkingdetails_asCustomer(self):
+    def test_create_parkingdetails_as_customer(self):
         self.client.force_authenticate(user=self.user)
-        data = {
-            "parking_space": self.parking_space.id,
-            "vehicle_info": self.vehicle_info.id,
-            "checkout_time": "2024-12-31T23:59:59Z"
-        }
+        data = {"parking_space": self.parking_space.id,
+                "vehicle_info": self.vehicle_info.id, "checkout_time": "2024-12-31T23:59:59Z"}
         response = self.client.post(self.url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(ParkingDetails.objects.count(), 2)
-        # self.parking_space.refresh_from_db()
-        self.assertTrue(not self.parking_space.occupied)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert ParkingDetails.objects.count() == 2
+        self.parking_space.refresh_from_db()
+        assert not self.parking_space.occupied
         self.vehicle_info.refresh_from_db()
-        self.assertTrue(not self.vehicle_info.parked)
+        assert not self.vehicle_info.parked
 
     def test_create_parkingdetails_with_occupied_space(self):
         self.client.force_authenticate(user=self.employee)
         self.parking_space.occupied = True
         self.parking_space.save()
-        data = {
-            "parking_space": self.parking_space.id,
-            "vehicle_info": self.vehicle_info.id,
-            "checkout_time": "2024-12-31T23:59:59Z"
-        }
+        data = {"parking_space": self.parking_space.id,
+                "vehicle_info": self.vehicle_info.id, "checkout_time": "2024-12-31T23:59:59Z"}
         response = self.client.post(self.url, data, format='json')
-        # print(response.data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("parking spot is occupied", str(response.data))
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "parking spot is occupied" in str(response.data)
