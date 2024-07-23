@@ -18,7 +18,7 @@ user = get_user_model()
 
 
 class ParkingSpaceView(ModelViewSet):
-    queryset = ParkingSpace.objects.all()
+    queryset = ParkingSpace.objects.all().order_by('number')
     serializer_class = ParkingSpaceSerializer
     pagination_class = ParkingSpacePagination
     filter_backends = [DjangoFilterBackend]

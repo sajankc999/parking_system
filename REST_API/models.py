@@ -30,6 +30,9 @@ class ParkingSpace(models.Model):
     def __str__(self) -> str:
         return f"{self.name}{self.number}"
 
+    class Meta:
+        ordering = ['number']  # Order by the 'number' field by default
+
 
 """
     Model for storing vehicle information .
@@ -55,7 +58,7 @@ class Vehicle_info(models.Model):
 
 
 class ParkingDetails(models.Model):
-    parking_space = models.ForeignKey(ParkingSpace, on_delete=models.CASCADE) #noqa skips the 
+    parking_space = models.ForeignKey(ParkingSpace, on_delete=models.CASCADE)  # noqa skips the
     vehicle_info = models.ForeignKey(Vehicle_info, on_delete=models.CASCADE)
     token = models.CharField(default=uuid.uuid4, max_length=100)
     created_at = models.DateTimeField(default=timezone.now, editable=False)
