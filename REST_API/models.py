@@ -28,7 +28,7 @@ class ParkingSpace(models.Model):
     occupied = models.BooleanField(default=False)
 
     def __str__(self) -> str:
-        return f"{self.name}{self.number}"
+        return f"{self.name}{self.number}--{self.pk}"
 
     class Meta:
         ordering = ['number']  # Order by the 'number' field by default
@@ -48,7 +48,7 @@ class Vehicle_info(models.Model):
     parked = models.BooleanField(default=False)
 
     def __str__(self) -> str:
-        return self.plate_no
+        return f"{self.plate_no}  {self.pk}"
 
 
 """

@@ -1,9 +1,10 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import render
+from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.viewsets import generics
-from rest_framework import status
+
 from authUser.serializer import *
 from authUser.tasks import send_welcome_email
 
@@ -18,8 +19,8 @@ class UserView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid(raise_exception=True):
-            send_welcome_email.delay_on_commit(
-                serializer.validated_data["email"])
+            # send_welcome_email.delay_on_commit(
+            #     serializer.validated_data["email"])
             if user.objects.filter(
                 username=serializer.validated_data["username"]
             ).first():
@@ -28,4 +29,4 @@ class UserView(generics.CreateAPIView):
                 username=serializer.validated_data["username"],
                 password=make_password(serializer.validated_data["password"]),
             )
-            return Response("user Created",status=status.HTTP_201_CREATED)
+            return Response(f"user Created{User}", status=status.HTTP_201_CREATED)

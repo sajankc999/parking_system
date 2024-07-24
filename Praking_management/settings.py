@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "drf_yasg",
     "authUser",
     "rest_framework_simplejwt",
+    "import_export",
 ]
 
 MIDDLEWARE = [
@@ -151,8 +152,13 @@ REST_FRAMEWORK = {
 
 SWAGGER_SETTINGS = {
     "SECURITY_DEFINITIONS": {
-        "api_key": {"type": "apiKey", "in": "header", "name": "Authorization"}
+        "JWT [Bearer {JWT}]": {
+            "name": "Authorization",
+            "type": "apiKey",
+            "in": "header",
+        }
     },
+    "USE_SESSION_AUTH": False,
 }
 
 CELERY_TIMEZONE = "Asia/Kathmandu"

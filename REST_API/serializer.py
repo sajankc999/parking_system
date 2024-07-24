@@ -31,6 +31,7 @@ class Vehicle_infoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle_info
         fields = "__all__"
+        extra_kwargs = {"checkout_time": {"required": False}}
 
 
 """
@@ -44,3 +45,7 @@ class ParkingDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ParkingDetails
         fields = "__all__"
+
+
+class FileUploadSerializer(serializers.Serializer):
+    file = serializers.FileField()

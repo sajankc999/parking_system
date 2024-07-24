@@ -1,15 +1,19 @@
+from tablib import Dataset
+from django.core.files.storage import default_storage
+import pandas as pd
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404, render
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, status
+from rest_framework import filters, status, views
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet, ViewSet, generics
+from rest_framework.viewsets import ModelViewSet, generics
 
 from REST_API.models import *
 from REST_API.pagination import *
 from REST_API.permissions import *
+from REST_API.resources import ParkingSpaceResourse
 from REST_API.serializer import *
 
 user = get_user_model()
@@ -18,7 +22,7 @@ user = get_user_model()
 
 
 class ParkingSpaceView(ModelViewSet):
-    queryset = ParkingSpace.objects.all().order_by('number')
+    queryset = ParkingSpace.objects.all().order_by('pk')
     serializer_class = ParkingSpaceSerializer
     pagination_class = ParkingSpacePagination
     filter_backends = [DjangoFilterBackend]
@@ -62,10 +66,11 @@ class Vehicle_infoView(ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         # raise Exception(user)
-        if user.customer:
-            return Vehicle_info.objects.filter(user=user)
-        if user.is_staff or user.is_superuser:
-            return Vehicle_info.objects.all()
+        if not user.is_anonymous:
+            if user.employee or user.is_superuser:
+                return Vehicle_info.objects.all().order_by('-pk')
+
+            return Vehicle_info.objects.filter(user=user).order_by('-pk')
 
     def create(self, request, *args, **kwargs):
         # raise Exception(self.request.user)
@@ -97,18 +102,20 @@ class ParkingDetailsView(generics.ListCreateAPIView):
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["parking_space", "vehicle_info"]
     ordering_fields = ["checkin_time", "checkout_time"]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-        if user.customer:
-            return ParkingDetails.objects.filter(vehicle_info__user=user).order_by("created_at")
-        if user.is_staff or user.is_superuser:
-            return self.queryset
-        return Response("something went wrong")
+        if not user.is_anonymous:
+            if user.is_staff or user.is_superuser:
+                return self.queryset
+
+            return ParkingDetails.objects.filter(vehicle_info__user=user)
 
     def create(self, request, *args, **kwargs):
         data = request.data
-        if request.user.is_superuser or request.user.employee:
+
+        if not user.is_anonymous and request.user.is_superuser or request.user.employee:
             serializer = self.get_serializer(data=data)
             if serializer.is_valid(raise_exception=True):
                 parking_space_id = data.get("parking_space")
@@ -152,9 +159,64 @@ class ParkingDetailsView(generics.ListCreateAPIView):
                     vehicle_obj.save()
                     parking_obj.occupied = True
                     parking_obj.save()
-                    return Response(status=status.HTTP_201_CREATED)
+                    return Response("Created successfully", status=status.HTTP_201_CREATED)
                     # return render(request,'ParkingDetails.html',context)
             else:
                 return Response('Bad data', status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response('you dont have permission', status=status.HTTP_403_FORBIDDEN)
+
+
+class FileUploadView(views.APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = FileUploadSerializer(data=request.data)
+        if serializer.is_valid():
+            # Save the uploaded file temporarily
+            uploaded_file = serializer.validated_data['file']
+            file_path = default_storage.save(uploaded_file.name, uploaded_file)
+
+            try:
+                # Determine the file type
+                if file_path.endswith('.csv'):
+                    # Read CSV file using pandas
+                    df = pd.read_csv(default_storage.path(file_path))
+                elif file_path.endswith('.xls'):
+                    # Read XLS file using pandas
+                    df = pd.read_excel(default_storage.path(
+                        file_path), engine='xlrd')
+                elif file_path.endswith('.xlsx'):
+                    # Read XLSX file using pandas
+                    df = pd.read_excel(default_storage.path(
+                        file_path), engine='openpyxl')
+                else:
+                    return Response({'error': 'Unsupported file type. Please upload a CSV or Excel file.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                # Convert the DataFrame to a list of dictionaries
+                data = df.to_dict(orient='records')
+
+                # Use the model resource to import the data
+                resource = ParkingSpaceResourse()
+
+                # Create a Dataset from the data
+                dataset = Dataset()
+                dataset.dict = data
+
+                result = resource.import_data(dataset, dry_run=False)
+
+                # Check for import errors
+                if result.has_errors():
+                    errors = []
+                    for row in result.rows:
+                        if row.errors:
+                            errors.append(
+                                {'row': row.number, 'errors': row.errors})
+                    return Response({'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
+
+                return Response({'message': 'Data imported successfully'}, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            finally:
+                # Delete the temporary file
+                default_storage.delete(file_path)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
