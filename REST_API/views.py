@@ -13,7 +13,7 @@ from rest_framework.viewsets import ModelViewSet, generics
 from REST_API.models import *
 from REST_API.pagination import *
 from REST_API.permissions import *
-from REST_API.resources import ParkingSpaceResourse
+from REST_API.resources import ParkingSpaceResource, VehicleInfoResource, UserResource, ParkingDetailsResource
 from REST_API.serializer import *
 
 user = get_user_model()
@@ -167,7 +167,7 @@ class ParkingDetailsView(generics.ListCreateAPIView):
             return Response('you dont have permission', status=status.HTTP_403_FORBIDDEN)
 
 
-class FileUploadView(views.APIView):
+class ParkingSpaceUploadView(views.APIView):
     def post(self, request, *args, **kwargs):
         serializer = FileUploadSerializer(data=request.data)
         if serializer.is_valid():
@@ -195,7 +195,62 @@ class FileUploadView(views.APIView):
                 data = df.to_dict(orient='records')
 
                 # Use the model resource to import the data
-                resource = ParkingSpaceResourse()
+                resource = ParkingSpaceResource()
+
+                # Create a Dataset from the data
+                dataset = Dataset()
+                dataset.dict = data
+
+                result = resource.import_data(dataset, dry_run=False)
+
+                # Check for import errors
+                if result.has_errors():
+                    errors = []
+                    for row in result.rows:
+                        if row.errors:
+                            errors.append(
+                                {'row': row.number, 'errors': row.errors})
+                    return Response({'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
+
+                return Response({'message': 'Data imported successfully'}, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            finally:
+                # Delete the temporary file
+                default_storage.delete(file_path)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VehicleInfoUploadView(views.APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = FileUploadSerializer(data=request.data)
+        if serializer.is_valid():
+            # Save the uploaded file temporarily
+            uploaded_file = serializer.validated_data['file']
+            file_path = default_storage.save(uploaded_file.name, uploaded_file)
+
+            try:
+                # Determine the file type
+                if file_path.endswith('.csv'):
+                    # Read CSV file using pandas
+                    df = pd.read_csv(default_storage.path(file_path))
+                elif file_path.endswith('.xls'):
+                    # Read XLS file using pandas
+                    df = pd.read_excel(default_storage.path(
+                        file_path), engine='xlrd')
+                elif file_path.endswith('.xlsx'):
+                    # Read XLSX file using pandas
+                    df = pd.read_excel(default_storage.path(
+                        file_path), engine='openpyxl')
+                else:
+                    return Response({'error': 'Unsupported file type. Please upload a CSV or Excel file.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                # Convert the DataFrame to a list of dictionaries
+                data = df.to_dict(orient='records')
+
+                # Use the model resource to import the data
+                resource = VehicleInfoResource()
 
                 # Create a Dataset from the data
                 dataset = Dataset()

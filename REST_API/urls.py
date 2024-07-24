@@ -14,5 +14,10 @@ urlpatterns = [
     path("parking-details", ParkingDetailsView.as_view(), name="parking-details"),
     path(r"", include(router.urls)),
     path('export/', export_scripts.export_to_excel, name='export_to_excel'),
-    path('upload-file/', FileUploadView.as_view(), name='upload_csv'),
+    path('upload-file-parking_space/', ParkingSpaceUploadView.as_view(),
+         name='upload_csv_parking_space'),
+    path('upload-file-vehicle_info/', VehicleInfoUploadView.as_view(),
+         name='upload_csv_vehicle_info'),
+    # path('upload-file-parking_details/', parkingdets.as_view(), name='upload_csv_'),
+
 ]
