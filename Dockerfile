@@ -24,7 +24,7 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock* /app/
 
 # Install dependencies
-RUN poetry install --no-root
+RUN poetry config virtualenvs.create false && poetry install --no-dev
 
 # Copy the current directory contents into the container
 COPY . /app/

@@ -87,11 +87,11 @@ WSGI_APPLICATION = "Praking_management.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": "pms",
         "USER": "postgres",
-        "PASSWORD": "admin",
-        "HOST": "localhost",
+        "PASSWORD": "postgres",
+        "HOST": "db",
         "PORT": "5432",
     }
 }
