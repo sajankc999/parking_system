@@ -1,0 +1,17 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+*.pot
+*.mo
+*.pyc
+.DS_Store
+*.pyo
+*.pyd
+*.sqlite3
+*.log
+*.pot
+*.mo
